@@ -22,4 +22,16 @@
     </div>
   </div>
 </div>
+<script>
+  document.querySelector('form').addEventListener('submit', function () {
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Importing…';
+
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-info mt-3';
+    alert.textContent = 'Processing your file, please wait. This may take a minute for large files.';
+    this.appendChild(alert);
+  });
+</script>
 {% endblock %}
