@@ -35,7 +35,11 @@
           <tbody>
             {% for row in service_costs %}
             <tr>
-              <td>{{ row.service_family or '(none)' }}</td>
+              <td>
+                <a href="{{ url_for('dashboard.family_detail', family=row.service_family or '') }}">
+                  {{ row.service_family or '(none)' }}
+                </a>
+              </td>
               <td class="text-end">{{ row.line_count }}</td>
               <td class="text-end cost">{{ row.total_cost|fmt_cost }}</td>
             </tr>
