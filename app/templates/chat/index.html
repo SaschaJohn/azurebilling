@@ -69,6 +69,10 @@
     color: #6c757d;
     font-style: italic;
   }
+  .bubble-ai p:last-child { margin-bottom: 0; }
+  .bubble-ai ul, .bubble-ai ol { padding-left: 1.25rem; margin-bottom: 0.5rem; }
+  .bubble-ai li { margin-bottom: 0.15rem; }
+  .bubble-ai strong { font-weight: 600; }
   #chat-history details summary {
     cursor: pointer;
     font-size: 0.8rem;
@@ -86,7 +90,10 @@
   }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
 <script>
+  if (typeof marked !== 'undefined') marked.setOptions({ breaks: true });
+
   const history = document.getElementById('chat-history');
   const input   = document.getElementById('question-input');
   const btn     = document.getElementById('ask-btn');
@@ -116,7 +123,9 @@
       .replace(/"/g, '&quot;');
   }
 
-  function nl2br(str) {
+  function renderMarkdown(str) {
+    if (typeof marked !== 'undefined') return marked.parse(str);
+    // Fallback: basic escaping with line breaks
     return escapeHtml(str).replace(/\n/g, '<br>');
   }
 
@@ -155,7 +164,7 @@
       appendBubble('bubble-error', escapeHtml(data.error));
     } else {
       const answer = data.answer || '(no answer)';
-      let html = nl2br(answer);
+      let html = renderMarkdown(answer);
       if (data.sql) {
         const rowNote = data.row_count !== undefined
           ? ` &mdash; ${data.row_count} row${data.row_count !== 1 ? 's' : ''}`
