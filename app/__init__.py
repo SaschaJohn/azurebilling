@@ -1,6 +1,15 @@
-from flask import Flask
+from flask import Flask, g, redirect, request, session
 from .config import Config
 from .extensions import db, migrate
+
+_CURRENCY_SYMBOLS = {
+    'DKK': 'kr.',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'SEK': 'kr.',
+    'NOK': 'kr.',
+}
 
 
 def create_app(config_class=Config):
@@ -34,10 +43,48 @@ def create_app(config_class=Config):
     from .cli import import_file_cmd
     app.cli.add_command(import_file_cmd)
 
+    # --- Currency conversion ---
+
+    @app.before_request
+    def _set_display_currency():
+        from .models.exchange_rate import ExchangeRate
+        from sqlalchemy import distinct
+
+        g.display_currency = session.get('display_currency', 'DKK')
+
+        if g.display_currency == 'DKK':
+            g.display_rate = 1.0
+        else:
+            row = (
+                ExchangeRate.query
+                .filter_by(from_currency='DKK', to_currency=g.display_currency)
+                .order_by(ExchangeRate.billing_month.desc())
+                .first()
+            )
+            g.display_rate = float(row.rate) if row else 1.0
+
+        # All to_currencies with a DKK→X rate defined
+        to_currencies = [
+            r[0] for r in
+            db.session.query(distinct(ExchangeRate.to_currency))
+            .filter_by(from_currency='DKK')
+            .order_by(ExchangeRate.to_currency)
+            .all()
+        ]
+        g.available_currencies = ['DKK'] + to_currencies
+
+    @app.route('/set-currency')
+    def set_currency():
+        to = request.args.get('to', 'DKK')
+        session['display_currency'] = to
+        return redirect(request.args.get('next') or request.referrer or '/')
+
     def _fmt_cost(value, decimals=2):
-        if value is None:
-            return f'kr. 0.{"0" * decimals}'
-        return f'kr. {float(value):,.{decimals}f}'
+        currency = getattr(g, 'display_currency', 'DKK')
+        rate     = getattr(g, 'display_rate', 1.0)
+        symbol   = _CURRENCY_SYMBOLS.get(currency, currency)
+        converted = float(value or 0) * rate
+        return f'{symbol} {converted:,.{decimals}f}'
 
     app.jinja_env.filters['fmt_cost'] = _fmt_cost
 
@@ -45,7 +92,6 @@ def create_app(config_class=Config):
 
     @app.template_global()
     def url_with_params(**overrides):
-        from flask import request
         args = request.args.to_dict()
         args.update(overrides)
         return '?' + _urlencode(args)

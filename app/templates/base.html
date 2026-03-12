@@ -31,6 +31,23 @@
           <li class="nav-item"><a class="nav-link" href="{{ url_for('meters.index') }}">Meters</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('exchange_rates.index') }}">Exchange Rates</a></li>
         </ul>
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+              {{ g.display_currency }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              {% for cur in g.available_currencies %}
+              <li>
+                <a class="dropdown-item {% if cur == g.display_currency %}active{% endif %}"
+                   href="{{ url_for('set_currency', to=cur, next=request.url) }}">
+                  {{ cur }}
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </li>
+        </ul>
       </div>
     </div>
   </nav>
