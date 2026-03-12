@@ -1,0 +1,26 @@
+{% macro sort_th(col, label, current_sort, current_dir, extra_class='') %}
+  {% if current_sort == col %}
+    {% set next_dir = 'asc' if current_dir == 'desc' else 'desc' %}
+    {% set indicator = ' ↓' if current_dir == 'desc' else ' ↑' %}
+    {% set cls = 'fw-semibold text-dark' %}
+  {% else %}
+    {% set next_dir = 'desc' %}
+    {% set indicator = '' %}
+    {% set cls = 'text-secondary' %}
+  {% endif %}
+  <th class="{{ extra_class }}">
+    <a href="{{ url_with_params(sort=col, dir=next_dir, page=1) }}"
+       class="text-decoration-none {{ cls }}">{{ label }}{{ indicator }}</a>
+  </th>
+{% endmacro %}
+
+{% macro filter_form(q, placeholder='Search…') %}
+<form method="get" class="mb-3 d-flex gap-2" style="max-width: 460px;">
+  <input type="hidden" name="sort" value="{{ request.args.get('sort', '') }}">
+  <input type="hidden" name="dir"  value="{{ request.args.get('dir', '') }}">
+  <input type="text" name="q" value="{{ q }}"
+         class="form-control form-control-sm" placeholder="{{ placeholder }}">
+  <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+  {% if q %}<a href="{{ url_with_params(q='', page=1) }}" class="btn btn-sm btn-outline-secondary">Clear</a>{% endif %}
+</form>
+{% endmacro %}

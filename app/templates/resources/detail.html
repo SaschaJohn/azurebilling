@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ rg.resource_group_name or rg.resource_id }} — Resources{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('resources.index') }}">Resources</a></li>
+    <li class="breadcrumb-item active">{{ rg.resource_group_name or rg.resource_id }}</li>
+  </ol>
+</nav>
+
+<h1 class="mb-1">{{ rg.resource_group_name or '(unnamed)' }}</h1>
+<p class="text-muted mb-3 small text-break">{{ rg.resource_id }}</p>
+
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card text-bg-primary">
+      <div class="card-body">
+        <h6 class="card-title">Total Cost</h6>
+        <p class="card-text fs-5 cost">{{ "%.4f"|format(total_cost|float) }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include "_line_items_table.html" %}
+{% endblock %}

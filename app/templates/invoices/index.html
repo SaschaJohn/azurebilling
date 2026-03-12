@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sort_th, filter_form %}
+{% block title %}Invoices — Azure Billing{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Invoices</h1>
+
+{{ filter_form(q, placeholder='Search invoice ID…') }}
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          {{ sort_th('invoice_id',          'Invoice ID',       sort, dir) }}
+          {{ sort_th('previous_invoice_id', 'Previous Invoice', sort, dir) }}
+          {{ sort_th('line_count',          'Lines',            sort, dir, 'text-end') }}
+          {{ sort_th('total_cost',          'Total Cost',       sort, dir, 'text-end') }}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pagination.items %}
+        <tr>
+          <td><a href="{{ url_for('invoices.detail', pk=row.id) }}">{{ row.invoice_id }}</a></td>
+          <td class="text-muted small">{{ row.previous_invoice_id or '' }}</td>
+          <td class="text-end">{{ row.line_count }}</td>
+          <td class="text-end cost">{{ "%.4f"|format(row.total_cost|float) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-muted text-center py-4">No invoices found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "_pagination.html" %}
+{% endblock %}

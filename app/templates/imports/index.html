@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Imports — Azure Billing{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>Import Batches</h1>
+  <a href="{{ url_for('imports.upload_form') }}" class="btn btn-success">Upload CSV</a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Filename</th>
+          <th>Status</th>
+          <th class="text-end">Rows</th>
+          <th class="text-end">Skipped</th>
+          <th>Started</th>
+          <th>Finished</th>
+          <th>Error</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in pagination.items %}
+        <tr>
+          <td>{{ b.filename }}</td>
+          <td>
+            <span class="badge {% if b.status == 'success' %}bg-success{% elif b.status == 'error' %}bg-danger{% elif b.status == 'processing' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+              {{ b.status }}
+            </span>
+          </td>
+          <td class="text-end">{{ b.row_count }}</td>
+          <td class="text-end">{{ b.skipped_count }}</td>
+          <td>{{ b.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td>{% if b.finished_at %}{{ b.finished_at.strftime('%Y-%m-%d %H:%M:%S') }}{% endif %}</td>
+          <td class="text-danger small">{{ b.error_msg or '' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-muted text-center py-4">No imports yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "_pagination.html" %}
+{% endblock %}

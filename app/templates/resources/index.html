@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sort_th, filter_form %}
+{% block title %}Resources — Azure Billing{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Resource Groups</h1>
+
+{{ filter_form(q, placeholder='Search name or resource ID…') }}
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          {{ sort_th('name',        'Resource Group', sort, dir) }}
+          {{ sort_th('resource_id', 'Resource ID',    sort, dir) }}
+          {{ sort_th('line_count',  'Lines',          sort, dir, 'text-end') }}
+          {{ sort_th('total_cost',  'Total Cost',     sort, dir, 'text-end') }}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pagination.items %}
+        <tr>
+          <td><a href="{{ url_for('resources.detail', pk=row.id) }}">{{ row.resource_group_name or '(unnamed)' }}</a></td>
+          <td class="text-muted small truncate" title="{{ row.resource_id }}">{{ row.resource_id }}</td>
+          <td class="text-end">{{ row.line_count }}</td>
+          <td class="text-end cost">{{ "%.4f"|format(row.total_cost|float) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-muted text-center py-4">No resource groups found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "_pagination.html" %}
+{% endblock %}

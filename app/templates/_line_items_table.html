@@ -1,0 +1,40 @@
+<div class="card mb-3">
+  <div class="card-header fw-semibold">Line Items</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Charge Type</th>
+            <th>Service Family</th>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Unit</th>
+            <th class="text-end">Cost</th>
+            <th>Currency</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in pagination.items %}
+          <tr>
+            <td>{{ line.charge_date }}</td>
+            <td>{{ line.charge_type or '' }}</td>
+            <td>{{ line.service.service_family if line.service else '' }}</td>
+            <td class="truncate" title="{{ line.product.product_name if line.product else '' }}">
+              {{ line.product.product_name if line.product else '' }}
+            </td>
+            <td class="cost">{{ line.quantity }}</td>
+            <td>{{ line.unit_of_measure or '' }}</td>
+            <td class="text-end cost">{{ "%.4f"|format(line.cost_in_billing_currency|float) if line.cost_in_billing_currency is not none else '0.0000' }}</td>
+            <td>{{ line.billing_currency or '' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" class="text-muted text-center py-3">No line items.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% include "_pagination.html" %}

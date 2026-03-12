@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Azure Billing{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Dashboard</h1>
+
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card text-bg-primary">
+      <div class="card-body">
+        <h6 class="card-title">Total Cost (Billing Currency)</h6>
+        <p class="card-text fs-4 cost">{{ "%.2f"|format(total_cost|float) }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-bg-secondary">
+      <div class="card-body">
+        <h6 class="card-title">Service Families</h6>
+        <p class="card-text fs-4">{{ service_costs|length }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-6 mb-4">
+    <div class="card">
+      <div class="card-header fw-semibold">Cost by Service Family</div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Service Family</th><th class="text-end">Lines</th><th class="text-end">Total Cost</th></tr>
+          </thead>
+          <tbody>
+            {% for row in service_costs %}
+            <tr>
+              <td>{{ row.service_family or '(none)' }}</td>
+              <td class="text-end">{{ row.line_count }}</td>
+              <td class="text-end cost">{{ "%.4f"|format(row.total_cost|float) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-muted text-center py-3">No data — import a CSV first.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6 mb-4">
+    <div class="card">
+      <div class="card-header fw-semibold">Top Subscriptions by Cost</div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Subscription</th><th class="text-end">Total Cost</th></tr>
+          </thead>
+          <tbody>
+            {% for row in top_subs %}
+            <tr>
+              <td>
+                <a href="{{ url_for('subscriptions.detail', pk=row.id) }}">
+                  {{ row.subscription_name or row.subscription_id }}
+                </a>
+              </td>
+              <td class="text-end cost">{{ "%.4f"|format(row.total_cost|float) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="text-muted text-center py-3">No data.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+    Recent Imports
+    <a href="{{ url_for('imports.upload_form') }}" class="btn btn-sm btn-success">Upload CSV</a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr><th>Filename</th><th>Status</th><th class="text-end">Rows</th><th class="text-end">Skipped</th><th>Started</th></tr>
+      </thead>
+      <tbody>
+        {% for b in recent_batches %}
+        <tr>
+          <td>{{ b.filename }}</td>
+          <td>
+            <span class="badge {% if b.status == 'success' %}bg-success{% elif b.status == 'error' %}bg-danger{% else %}bg-secondary{% endif %}">
+              {{ b.status }}
+            </span>
+          </td>
+          <td class="text-end">{{ b.row_count }}</td>
+          <td class="text-end">{{ b.skipped_count }}</td>
+          <td>{{ b.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted text-center py-3">No imports yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sort_th, filter_form %}
+{% block title %}Meters — Azure Billing{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Meters</h1>
+
+{{ filter_form(q, placeholder='Search name, category, or region…') }}
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          {{ sort_th('name',        'Meter Name', sort, dir) }}
+          {{ sort_th('category',    'Category',   sort, dir) }}
+          {{ sort_th('region',      'Region',     sort, dir) }}
+          {{ sort_th('usage_count', 'Usages',     sort, dir, 'text-end') }}
+          {{ sort_th('total_cost',  'Total Cost', sort, dir, 'text-end') }}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pagination.items %}
+        <tr>
+          <td><a href="{{ url_for('meters.detail', pk=row.id) }}">{{ row.meter_name or row.meter_id }}</a></td>
+          <td>{{ row.meter_category or '' }}</td>
+          <td>{{ row.meter_region or '' }}</td>
+          <td class="text-end">{{ row.usage_count }}</td>
+          <td class="text-end cost">{{ "%.4f"|format(row.total_cost|float) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted text-center py-4">No meters found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "_pagination.html" %}
+{% endblock %}

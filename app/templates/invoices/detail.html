@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ invoice.invoice_id }} — Invoices{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('invoices.index') }}">Invoices</a></li>
+    <li class="breadcrumb-item active">{{ invoice.invoice_id }}</li>
+  </ol>
+</nav>
+
+<h1 class="mb-1">Invoice {{ invoice.invoice_id }}</h1>
+{% if invoice.previous_invoice_id %}
+<p class="text-muted mb-3">Previous: {{ invoice.previous_invoice_id }}</p>
+{% endif %}
+
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card text-bg-primary">
+      <div class="card-body">
+        <h6 class="card-title">Total Cost</h6>
+        <p class="card-text fs-5 cost">{{ "%.4f"|format(total_cost|float) }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include "_line_items_table.html" %}
+{% endblock %}
