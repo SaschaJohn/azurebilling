@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Month-over-Month Delta — Azure Billing{% endblock %}
+
+{% block content %}
+{% macro delta_section(title, rows, month_a, month_b) %}
+<div class="card mb-4">
+  <div class="card-header fw-semibold">{{ title }}</div>
+  {% if rows %}
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th>
+          <th class="text-end">{{ month_a.strftime('%Y-%m') if month_a else '—' }}</th>
+          <th class="text-end">{{ month_b.strftime('%Y-%m') if month_b else '—' }}</th>
+          <th class="text-end">Delta</th>
+          <th class="text-end">% Change</th>
+          <th style="min-width:120px">Magnitude</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr class="{{ row.row_class }}">
+          <td class="truncate">{{ row.label }}</td>
+          <td class="text-end cost">{{ row.cost_a | fmt_cost }}</td>
+          <td class="text-end cost">{{ row.cost_b | fmt_cost }}</td>
+          <td class="text-end cost">{{ row.sign }}{{ row.delta | fmt_cost }}</td>
+          <td class="text-end">
+            {% if row.cost_b == 0 and row.cost_a > 0 %}
+              <span class="badge bg-secondary">Removed</span>
+            {% elif row.pct_change is none %}
+              <span class="badge bg-primary">New</span>
+            {% else %}
+              {{ '%.1f' | format(row.pct_change) }}%
+            {% endif %}
+          </td>
+          <td>
+            <div class="progress" style="height:16px">
+              <div class="progress-bar {{ 'bg-danger' if row.delta > 0 else 'bg-success' }}"
+                   role="progressbar"
+                   style="width:{{ row.bar_width }}%"
+                   aria-valuenow="{{ row.bar_width }}" aria-valuemin="0" aria-valuemax="100">
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-muted">No data for selected months.</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h4 class="mb-0">Month-over-Month Delta</h4>
+</div>
+
+{# Month selector form #}
+<form method="get" class="row g-2 align-items-end mb-4">
+  <div class="col-auto">
+    <label class="form-label mb-1">Month A (baseline)</label>
+    <select name="month_a" class="form-select form-select-sm">
+      {% for m in g.available_months %}
+      <option value="{{ m.strftime('%Y-%m') }}"
+        {% if month_a and m == month_a %}selected{% endif %}>
+        {{ m.strftime('%Y-%m') }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-1">Month B (comparison)</label>
+    <select name="month_b" class="form-select form-select-sm">
+      {% for m in g.available_months %}
+      <option value="{{ m.strftime('%Y-%m') }}"
+        {% if month_b and m == month_b %}selected{% endif %}>
+        {{ m.strftime('%Y-%m') }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary btn-sm">Compare</button>
+  </div>
+</form>
+
+{# Summary cards — totals from service_rows (non-nullable FK, full coverage) #}
+{% set total_a = service_rows | sum(attribute='cost_a') %}
+{% set total_b = service_rows | sum(attribute='cost_b') %}
+{% set net_delta = total_b - total_a %}
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small mb-1">Total — {{ month_a.strftime('%Y-%m') if month_a else '—' }}</div>
+        <div class="fs-5 cost fw-semibold">{{ total_a | fmt_cost }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small mb-1">Total — {{ month_b.strftime('%Y-%m') if month_b else '—' }}</div>
+        <div class="fs-5 cost fw-semibold">{{ total_b | fmt_cost }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center {{ 'border-danger' if net_delta > 0 else ('border-success' if net_delta < 0 else '') }}">
+      <div class="card-body {{ 'text-danger' if net_delta > 0 else ('text-success' if net_delta < 0 else '') }}">
+        <div class="text-muted small mb-1">Net Delta</div>
+        <div class="fs-5 cost fw-semibold">
+          {{ '+' if net_delta > 0 else '' }}{{ net_delta | fmt_cost }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ delta_section('By Service Family', service_rows, month_a, month_b) }}
+{{ delta_section('By Subscription', sub_rows, month_a, month_b) }}
+{{ delta_section('By Resource Group', rg_rows, month_a, month_b) }}
+{% endblock %}
