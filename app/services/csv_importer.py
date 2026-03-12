@@ -177,11 +177,11 @@ def _process_row(row: dict, batch_id, cache: DimensionCache) -> dict:
     )
 
     # Resource group (nullable when ResourceId is empty)
-    resource_id = row.get('ResourceId', '') or ''
+    resource_id = (row.get('ResourceId', '') or '').lower()
     resource_group_fk = (
         cache.get_resource_group(
             resource_id,
-            row.get('resourceGroupName', '') or '',
+            (row.get('resourceGroupName', '') or '').lower(),
             subscription_fk,
         )
         if resource_id
