@@ -92,6 +92,9 @@
   const btn     = document.getElementById('ask-btn');
   const activeMonth = {{ g.active_month.strftime('%Y-%m') | tojson if g.active_month else 'null' }};
 
+  // Conversation history sent to the backend for context
+  const conversationHistory = [];
+
   function scrollBottom() {
     history.scrollTop = history.scrollHeight;
   }
@@ -136,7 +139,7 @@
       const resp = await fetch('/chat/ask', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({question, active_month: activeMonth}),
+        body: JSON.stringify({question, active_month: activeMonth, history: conversationHistory}),
       });
       data = await resp.json();
     } catch (err) {
@@ -151,7 +154,8 @@
     if (data.error) {
       appendBubble('bubble-error', escapeHtml(data.error));
     } else {
-      let html = nl2br(data.answer || '(no answer)');
+      const answer = data.answer || '(no answer)';
+      let html = nl2br(answer);
       if (data.sql) {
         const rowNote = data.row_count !== undefined
           ? ` &mdash; ${data.row_count} row${data.row_count !== 1 ? 's' : ''}`
@@ -163,6 +167,13 @@
           </details>`;
       }
       appendBubble('bubble-ai', html);
+
+      // Append to history: user turn + assistant turn (SQL + answer for full context)
+      conversationHistory.push({role: 'user', content: question});
+      const assistantContent = data.sql
+        ? `SQL:\n${data.sql}\n\nAnswer: ${answer}`
+        : answer;
+      conversationHistory.push({role: 'assistant', content: assistantContent});
     }
 
     btn.disabled = false;

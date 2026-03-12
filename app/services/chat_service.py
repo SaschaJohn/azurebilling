@@ -102,20 +102,21 @@ def _month_clause(active_month) -> str:
     return f"the billing month {active_month.strftime('%Y-%m')} (filter: charge_date >= '{active_month.strftime('%Y-%m-01')}' AND charge_date < next month)"
 
 
-def _generate_sql(question: str, active_month) -> str | None:
+def _generate_sql(question: str, active_month, history: list) -> str | None:
     month_hint = _month_clause(active_month)
     system = (
         SCHEMA_CONTEXT
         + f"\n\nThe user is currently viewing {month_hint}. "
         "Unless the user explicitly asks for all months, add an appropriate WHERE clause to filter by that month. "
-        "Return ONLY a valid PostgreSQL SELECT query. No markdown, no explanation, no code fences."
+        "Return ONLY a valid PostgreSQL SELECT query. No markdown, no explanation, no code fences. "
+        "Use prior conversation turns to resolve follow-up questions (e.g. 'break that down', 'now filter to X')."
     )
+    # Keep last 6 exchanges (12 messages) to avoid token bloat
+    trimmed = history[-12:] if len(history) > 12 else history
+    messages = [{"role": "system", "content": system}] + trimmed + [{"role": "user", "content": question}]
     response = _client().chat.completions.create(
         model=_deployment(),
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": question},
-        ],
+        messages=messages,
         temperature=0,
         max_completion_tokens=1000,
     )
@@ -194,9 +195,10 @@ def _format_answer(question: str, sql: str, rows: list, columns: list) -> str:
     return response.choices[0].message.content.strip()
 
 
-def ask(question: str, active_month=None) -> dict:
+def ask(question: str, active_month=None, history: list | None = None) -> dict:
+    history = history or []
     try:
-        sql = _generate_sql(question, active_month)
+        sql = _generate_sql(question, active_month, history)
     except Exception as e:
         return {"answer": f"Failed to generate SQL: {e}", "sql": None}
 
