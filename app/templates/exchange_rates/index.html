@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Exchange Rates — Azure Billing{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-3">
+  <h1 class="mb-0">Exchange Rates</h1>
+  <a href="{{ url_for('exchange_rates.create') }}" class="btn btn-sm btn-primary">+ Add Rate</a>
+</div>
+
+{% if rates %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Billing Month</th>
+          <th>From</th>
+          <th>To</th>
+          <th class="text-end">Rate</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rates %}
+        <tr>
+          <td>{{ r.billing_month.strftime('%Y-%m') }}</td>
+          <td><span class="badge bg-secondary">{{ r.from_currency }}</span></td>
+          <td><span class="badge bg-secondary">{{ r.to_currency }}</span></td>
+          <td class="text-end cost">{{ '%.6f'|format(r.rate|float) }}</td>
+          <td class="text-end" style="white-space:nowrap">
+            <a href="{{ url_for('exchange_rates.edit', pk=r.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+            <form method="post" action="{{ url_for('exchange_rates.delete', pk=r.id) }}"
+                  class="d-inline"
+                  onsubmit="return confirm('Delete {{ r.billing_month.strftime('%Y-%m') }} {{ r.from_currency }}/{{ r.to_currency }}?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-info">No exchange rates defined yet. <a href="{{ url_for('exchange_rates.create') }}">Add one.</a></div>
+{% endif %}
+{% endblock %}

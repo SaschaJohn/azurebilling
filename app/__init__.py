@@ -20,6 +20,7 @@ def create_app(config_class=Config):
     from .controllers.resources import bp as resources_bp
     from .controllers.meters import bp as meters_bp
     from .controllers.storage import bp as storage_bp
+    from .controllers.exchange_rates import bp as exchange_rates_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(imports_bp)
@@ -28,6 +29,7 @@ def create_app(config_class=Config):
     app.register_blueprint(resources_bp)
     app.register_blueprint(meters_bp)
     app.register_blueprint(storage_bp)
+    app.register_blueprint(exchange_rates_bp)
 
     from .cli import import_file_cmd
     app.cli.add_command(import_file_cmd)

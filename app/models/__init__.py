@@ -14,6 +14,7 @@ from .dimensions import (
 )
 from .import_batch import ImportBatch
 from .fact import FactBillingLine
+from .exchange_rate import ExchangeRate
 
 __all__ = [
     'DimBillingAccount',
@@ -30,4 +31,5 @@ __all__ = [
     'DimBenefit',
     'ImportBatch',
     'FactBillingLine',
+    'ExchangeRate',
 ]

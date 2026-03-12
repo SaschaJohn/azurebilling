@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Exchange Rate — Azure Billing{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-3">
+  <h1 class="mb-0">{{ action }} Exchange Rate</h1>
+  <a href="{{ url_for('exchange_rates.index') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+</div>
+
+{% set year_val  = obj.billing_month.year  if obj and obj.billing_month else '' %}
+{% set month_val = obj.billing_month.month if obj and obj.billing_month else '' %}
+{% set from_val  = obj.from_currency if obj else '' %}
+{% set to_val    = obj.to_currency   if obj else '' %}
+{% set rate_val  = obj.rate          if obj else '' %}
+
+<div class="card" style="max-width:480px">
+  <div class="card-body">
+    <form method="post">
+      <div class="row g-3 mb-3">
+        <div class="col">
+          <label class="form-label fw-semibold">Year</label>
+          <input type="number" name="year" value="{{ year_val }}"
+                 class="form-control" placeholder="2026" required min="2000" max="2100">
+        </div>
+        <div class="col">
+          <label class="form-label fw-semibold">Month</label>
+          <select name="month" class="form-select" required>
+            <option value="">—</option>
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if month_val == m %}selected{% endif %}>
+              {{ '%02d'|format(m) }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col">
+          <label class="form-label fw-semibold">From currency</label>
+          <input type="text" name="from_currency" value="{{ from_val }}"
+                 class="form-control text-uppercase" placeholder="DKK"
+                 maxlength="10" required>
+        </div>
+        <div class="col">
+          <label class="form-label fw-semibold">To currency</label>
+          <input type="text" name="to_currency" value="{{ to_val }}"
+                 class="form-control text-uppercase" placeholder="USD"
+                 maxlength="10" required>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Rate <small class="text-muted">(1 from = X to)</small></label>
+        <input type="number" name="rate" value="{{ rate_val }}"
+               class="form-control" placeholder="0.136500"
+               step="any" min="0.000001" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary">{{ action }}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
