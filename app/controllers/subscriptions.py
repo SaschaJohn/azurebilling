@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, g, render_template, request
 from sqlalchemy import func, select
 
 from app.extensions import db
@@ -39,6 +39,12 @@ def index():
         .group_by(DimSubscription.id)
     )
 
+    if g.active_month:
+        query = query.filter(
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        )
+
     if name:      query = query.filter(DimSubscription.subscription_name.ilike(f'%{name}%'))
     if sub_id:    query = query.filter(DimSubscription.subscription_id.ilike(f'%{sub_id}%'))
     if min_lines: query = query.having(func.count(FactBillingLine.id) >= min_lines)
@@ -61,27 +67,34 @@ def detail(pk):
     subscription = db.get_or_404(DimSubscription, pk)
     page = request.args.get('page', 1, type=int)
 
+    month_filters = []
+    if g.active_month:
+        month_filters = [
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        ]
+
     service_costs = db.session.execute(
         select(
             DimService.service_family,
             func.sum(FactBillingLine.cost_in_billing_currency).label('total_cost'),
         )
         .join(FactBillingLine, FactBillingLine.service_fk == DimService.id)
-        .where(FactBillingLine.subscription_fk == pk)
+        .where(FactBillingLine.subscription_fk == pk, *month_filters)
         .group_by(DimService.service_family)
         .order_by(func.sum(FactBillingLine.cost_in_billing_currency).desc())
     ).all()
 
     lines_stmt = (
         select(FactBillingLine)
-        .where(FactBillingLine.subscription_fk == pk)
+        .where(FactBillingLine.subscription_fk == pk, *month_filters)
         .order_by(FactBillingLine.charge_date.desc())
     )
     pagination = db.paginate(lines_stmt, page=page, per_page=50, error_out=False)
 
     total_cost = db.session.execute(
         select(func.sum(FactBillingLine.cost_in_billing_currency))
-        .where(FactBillingLine.subscription_fk == pk)
+        .where(FactBillingLine.subscription_fk == pk, *month_filters)
     ).scalar() or 0
 
     return render_template(

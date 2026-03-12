@@ -1,3 +1,4 @@
+from datetime import date
 from flask import Flask, g, redirect, request, session
 from .config import Config
 from .extensions import db, migrate
@@ -77,6 +78,48 @@ def create_app(config_class=Config):
     def set_currency():
         to = request.args.get('to', 'DKK')
         session['display_currency'] = to
+        return redirect(request.args.get('next') or request.referrer or '/')
+
+    # --- Month filter ---
+
+    @app.before_request
+    def _set_active_month():
+        from .models.fact import FactBillingLine
+        from sqlalchemy import func
+
+        month_rows = (
+            db.session.query(
+                func.date_trunc('month', FactBillingLine.charge_date).label('m')
+            )
+            .distinct()
+            .order_by(func.date_trunc('month', FactBillingLine.charge_date).desc())
+            .all()
+        )
+        month_dates = [r.m.date() for r in month_rows if r.m]
+        g.available_months = month_dates  # list of date objects, newest first
+
+        stored = session.get('billing_month', '__unset__')
+        if stored == '__unset__' and month_dates:
+            g.active_month = month_dates[0]
+        elif stored == 'all' or not month_dates:
+            g.active_month = None
+        else:
+            try:
+                y, m = map(int, stored.split('-'))
+                g.active_month = date(y, m, 1)
+            except (ValueError, AttributeError):
+                g.active_month = month_dates[0] if month_dates else None
+
+        if g.active_month:
+            d = g.active_month
+            g.next_month = date(d.year + 1, 1, 1) if d.month == 12 else date(d.year, d.month + 1, 1)
+        else:
+            g.next_month = None
+
+    @app.route('/set-month')
+    def set_month():
+        m = request.args.get('m', 'all')
+        session['billing_month'] = m
         return redirect(request.args.get('next') or request.referrer or '/')
 
     def _fmt_cost(value, decimals=2):

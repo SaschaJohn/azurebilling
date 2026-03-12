@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, g, render_template, request
 from sqlalchemy import func, select
 
 from app.extensions import db
@@ -43,6 +43,12 @@ def index():
         .group_by(DimMeter.id)
     )
 
+    if g.active_month:
+        query = query.filter(
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        )
+
     if name:       query = query.filter(DimMeter.meter_name.ilike(f'%{name}%'))
     if category:   query = query.filter(DimMeter.meter_category.ilike(f'%{category}%'))
     if region:     query = query.filter(DimMeter.meter_region.ilike(f'%{region}%'))
@@ -67,21 +73,28 @@ def detail(pk):
     meter = db.get_or_404(DimMeter, pk)
     page = request.args.get('page', 1, type=int)
 
+    month_filters = []
+    if g.active_month:
+        month_filters = [
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        ]
+
     lines_stmt = (
         select(FactBillingLine)
-        .where(FactBillingLine.meter_fk == pk)
+        .where(FactBillingLine.meter_fk == pk, *month_filters)
         .order_by(FactBillingLine.charge_date.desc())
     )
     pagination = db.paginate(lines_stmt, page=page, per_page=50, error_out=False)
 
     total_cost = db.session.execute(
         select(func.sum(FactBillingLine.cost_in_billing_currency))
-        .where(FactBillingLine.meter_fk == pk)
+        .where(FactBillingLine.meter_fk == pk, *month_filters)
     ).scalar() or 0
 
     usage_count = db.session.execute(
         select(func.count(FactBillingLine.id))
-        .where(FactBillingLine.meter_fk == pk)
+        .where(FactBillingLine.meter_fk == pk, *month_filters)
     ).scalar() or 0
 
     return render_template(

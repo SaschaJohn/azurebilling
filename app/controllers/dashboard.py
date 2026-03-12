@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, g, render_template
 from sqlalchemy import func, select
 
 from app.extensions import db
@@ -11,6 +11,13 @@ bp = Blueprint('dashboard', __name__)
 
 @bp.route('/')
 def index():
+    month_filters = []
+    if g.active_month:
+        month_filters = [
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        ]
+
     # Cost by service family
     service_costs = db.session.execute(
         select(
@@ -19,6 +26,7 @@ def index():
             func.count(FactBillingLine.id).label('line_count'),
         )
         .join(FactBillingLine, FactBillingLine.service_fk == DimService.id)
+        .where(*month_filters)
         .group_by(DimService.service_family)
         .order_by(func.sum(FactBillingLine.cost_in_billing_currency).desc())
     ).all()
@@ -32,6 +40,7 @@ def index():
             func.sum(FactBillingLine.cost_in_billing_currency).label('total_cost'),
         )
         .join(FactBillingLine, FactBillingLine.subscription_fk == DimSubscription.id)
+        .where(*month_filters)
         .group_by(DimSubscription.id)
         .order_by(func.sum(FactBillingLine.cost_in_billing_currency).desc())
         .limit(10)
@@ -40,6 +49,7 @@ def index():
     # Total cost
     total_cost = db.session.execute(
         select(func.sum(FactBillingLine.cost_in_billing_currency))
+        .where(*month_filters)
     ).scalar() or 0
 
     # Recent import batches

@@ -1,7 +1,7 @@
 from collections import defaultdict
 from decimal import Decimal
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, g, render_template, request
 from sqlalchemy import func
 
 from app.extensions import db
@@ -43,7 +43,7 @@ def index():
 
     # --- Heatmap query ---
     # Top 15 storage accounts by total cost, broken down by meter_sub_category
-    heatmap_rows = (
+    heatmap_q = (
         db.session.query(
             DimResourceGroup.resource_id,
             DimMeter.meter_sub_category,
@@ -55,8 +55,13 @@ def index():
         .filter(DimResourceGroup.resource_id.ilike(_STORAGE_FILTER))
         .filter(FactBillingLine.meter_fk.isnot(None))
         .group_by(DimResourceGroup.resource_id, DimMeter.meter_sub_category)
-        .all()
     )
+    if g.active_month:
+        heatmap_q = heatmap_q.filter(
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        )
+    heatmap_rows = heatmap_q.all()
 
     # Build per-account cost totals to pick top 15
     account_cost = defaultdict(float)
@@ -101,6 +106,12 @@ def index():
         .group_by(DimResourceGroup.id)
     )
 
+    if g.active_month:
+        list_query = list_query.filter(
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        )
+
     if name:     list_query = list_query.filter(DimResourceGroup.resource_id.ilike(f'%{name}%'))
     if rg:       list_query = list_query.filter(DimResourceGroup.resource_group_name.ilike(f'%{rg}%'))
     if min_cost: list_query = list_query.having(func.sum(FactBillingLine.cost_in_billing_currency) >= min_cost)
@@ -133,7 +144,7 @@ def index():
 def detail(pk):
     rg = db.get_or_404(DimResourceGroup, pk)
 
-    rows = (
+    detail_q = (
         db.session.query(
             func.date_trunc('month', FactBillingLine.charge_date).label('month'),
             DimMeter.meter_name,
@@ -147,8 +158,13 @@ def detail(pk):
             func.date_trunc('month', FactBillingLine.charge_date),
             DimMeter.meter_name,
         )
-        .all()
     )
+    if g.active_month:
+        detail_q = detail_q.filter(
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        )
+    rows = detail_q.all()
 
     months = sorted({r.month for r in rows}, reverse=True)
     meter_totals = defaultdict(Decimal)

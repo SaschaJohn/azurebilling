@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, g, render_template, request
 from sqlalchemy import func, select
 
 from app.extensions import db
@@ -39,6 +39,12 @@ def index():
         .group_by(DimInvoice.id)
     )
 
+    if g.active_month:
+        query = query.filter(
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        )
+
     if invoice_id:      query = query.filter(DimInvoice.invoice_id.ilike(f'%{invoice_id}%'))
     if prev_invoice_id: query = query.filter(DimInvoice.previous_invoice_id.ilike(f'%{prev_invoice_id}%'))
     if min_lines:       query = query.having(func.count(FactBillingLine.id) >= min_lines)
@@ -62,16 +68,23 @@ def detail(pk):
     invoice = db.get_or_404(DimInvoice, pk)
     page = request.args.get('page', 1, type=int)
 
+    month_filters = []
+    if g.active_month:
+        month_filters = [
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        ]
+
     lines_stmt = (
         select(FactBillingLine)
-        .where(FactBillingLine.invoice_fk == pk)
+        .where(FactBillingLine.invoice_fk == pk, *month_filters)
         .order_by(FactBillingLine.charge_date.desc())
     )
     pagination = db.paginate(lines_stmt, page=page, per_page=50, error_out=False)
 
     total_cost = db.session.execute(
         select(func.sum(FactBillingLine.cost_in_billing_currency))
-        .where(FactBillingLine.invoice_fk == pk)
+        .where(FactBillingLine.invoice_fk == pk, *month_filters)
     ).scalar() or 0
 
     return render_template(

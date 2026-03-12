@@ -34,6 +34,28 @@
         <ul class="navbar-nav ms-auto">
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+              {{ g.active_month.strftime('%Y-%m') if g.active_month else 'All months' }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <a class="dropdown-item {% if not g.active_month %}active{% endif %}"
+                   href="{{ url_for('set_month', m='all', next=request.url) }}">
+                  All months
+                </a>
+              </li>
+              {% if g.available_months %}<li><hr class="dropdown-divider"></li>{% endif %}
+              {% for m in g.available_months %}
+              <li>
+                <a class="dropdown-item {% if g.active_month == m %}active{% endif %}"
+                   href="{{ url_for('set_month', m=m.strftime('%Y-%m'), next=request.url) }}">
+                  {{ m.strftime('%Y-%m') }}
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
               {{ g.display_currency }}
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
