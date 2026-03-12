@@ -1,4 +1,5 @@
 from collections import defaultdict
+from decimal import Decimal
 
 from flask import Blueprint, render_template, request
 from sqlalchemy import func
@@ -125,4 +126,53 @@ def index():
         dir=direction,
         filters=filters,
         account_name=_account_name,
+    )
+
+
+@bp.route('/<int:pk>')
+def detail(pk):
+    rg = db.get_or_404(DimResourceGroup, pk)
+
+    rows = (
+        db.session.query(
+            func.date_trunc('month', FactBillingLine.charge_date).label('month'),
+            DimMeter.meter_name,
+            func.sum(FactBillingLine.cost_in_billing_currency).label('total_cost'),
+        )
+        .select_from(DimResourceGroup)
+        .join(FactBillingLine, FactBillingLine.resource_group_fk == DimResourceGroup.id)
+        .outerjoin(DimMeter, FactBillingLine.meter_fk == DimMeter.id)
+        .filter(DimResourceGroup.id == pk)
+        .group_by(
+            func.date_trunc('month', FactBillingLine.charge_date),
+            DimMeter.meter_name,
+        )
+        .all()
+    )
+
+    months = sorted({r.month for r in rows}, reverse=True)
+    meter_totals = defaultdict(Decimal)
+    for r in rows:
+        meter_totals[r.meter_name or '(none)'] += r.total_cost or Decimal(0)
+    meters = sorted(meter_totals, key=lambda m: meter_totals[m], reverse=True)
+
+    pivot = defaultdict(lambda: defaultdict(Decimal))
+    month_totals = defaultdict(Decimal)
+    for r in rows:
+        meter = r.meter_name or '(none)'
+        pivot[meter][r.month] += r.total_cost or Decimal(0)
+        month_totals[r.month] += r.total_cost or Decimal(0)
+
+    grand_total = sum(meter_totals.values(), Decimal(0))
+
+    return render_template(
+        'storage/detail.html',
+        rg=rg,
+        account_name=_account_name(rg.resource_id),
+        months=months,
+        meters=meters,
+        pivot=pivot,
+        meter_totals=meter_totals,
+        month_totals=month_totals,
+        grand_total=grand_total,
     )

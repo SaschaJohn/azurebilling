@@ -79,7 +79,9 @@
         <tbody>
           {% for row in pagination.items %}
           <tr>
-            <td class="truncate" title="{{ row.resource_id }}">{{ account_name(row.resource_id) }}</td>
+            <td class="truncate" title="{{ row.resource_id }}">
+              <a href="{{ url_for('storage.detail', pk=row.id) }}">{{ account_name(row.resource_id) }}</a>
+            </td>
             <td class="text-muted small truncate" title="{{ row.resource_id }}">{{ row.resource_group_name or '(unnamed)' }}</td>
             <td class="text-end">{{ '{:,.0f}'.format(row.transactions or 0) }}</td>
             <td class="text-end cost">{{ row.total_cost|fmt_cost }}</td>

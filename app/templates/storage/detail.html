@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ account_name }} — Storage Accounts{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('storage.index') }}">Storage Accounts</a></li>
+    <li class="breadcrumb-item active">{{ account_name }}</li>
+  </ol>
+</nav>
+
+<h1 class="mb-1">{{ account_name }}</h1>
+<p class="text-muted small mb-3">{{ rg.resource_id }}</p>
+
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card text-bg-primary">
+      <div class="card-body">
+        <h6 class="card-title">Total Cost</h6>
+        <p class="card-text fs-5 cost">{{ grand_total|fmt_cost }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if meters %}
+<div class="card">
+  <div class="card-header fw-semibold">Monthly Cost by Meter</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0" style="font-size:0.85rem">
+        <thead class="table-light">
+          <tr>
+            <th style="min-width:200px">Meter</th>
+            {% for month in months %}
+            <th class="text-end" style="min-width:110px; white-space:nowrap">
+              {{ month.strftime('%Y-%m') }}
+            </th>
+            {% endfor %}
+            <th class="text-end" style="min-width:110px">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for meter in meters %}
+          <tr>
+            <td class="truncate" title="{{ meter }}">{{ meter }}</td>
+            {% for month in months %}
+              {% set val = pivot[meter][month] %}
+              {% if val %}
+                <td class="text-end cost">{{ val|fmt_cost }}</td>
+              {% else %}
+                <td class="text-end text-muted">—</td>
+              {% endif %}
+            {% endfor %}
+            <td class="text-end cost fw-semibold">{{ meter_totals[meter]|fmt_cost }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light fw-semibold">
+          <tr>
+            <td>Total</td>
+            {% for month in months %}
+            <td class="text-end cost">{{ month_totals[month]|fmt_cost }}</td>
+            {% endfor %}
+            <td class="text-end cost">{{ grand_total|fmt_cost }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-info">No billing data found for this storage account.</div>
+{% endif %}
+{% endblock %}
