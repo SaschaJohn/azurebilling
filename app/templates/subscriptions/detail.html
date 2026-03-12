@@ -17,7 +17,7 @@
     <div class="card text-bg-primary">
       <div class="card-body">
         <h6 class="card-title">Total Cost</h6>
-        <p class="card-text fs-5 cost">{{ "%.4f"|format(total_cost|float) }}</p>
+        <p class="card-text fs-5 cost">{{ total_cost|fmt_cost }}</p>
       </div>
     </div>
   </div>
@@ -34,7 +34,7 @@
         {% for row in service_costs %}
         <tr>
           <td>{{ row.service_family or '(none)' }}</td>
-          <td class="text-end cost">{{ "%.4f"|format(row.total_cost|float) }}</td>
+          <td class="text-end cost">{{ row.total_cost|fmt_cost }}</td>
         </tr>
         {% endfor %}
       </tbody>

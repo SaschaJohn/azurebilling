@@ -26,7 +26,7 @@
             </td>
             <td class="cost">{{ line.quantity }}</td>
             <td>{{ line.unit_of_measure or '' }}</td>
-            <td class="text-end cost">{{ "%.4f"|format(line.cost_in_billing_currency|float) if line.cost_in_billing_currency is not none else '0.0000' }}</td>
+            <td class="text-end cost">{{ line.cost_in_billing_currency|fmt_cost }}</td>
             <td>{{ line.billing_currency or '' }}</td>
           </tr>
           {% else %}

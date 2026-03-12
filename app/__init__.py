@@ -30,6 +30,13 @@ def create_app(config_class=Config):
     from .cli import import_file_cmd
     app.cli.add_command(import_file_cmd)
 
+    def _fmt_cost(value, decimals=4):
+        if value is None:
+            return f'kr. 0.{"0" * decimals}'
+        return f'kr. {float(value):,.{decimals}f}'
+
+    app.jinja_env.filters['fmt_cost'] = _fmt_cost
+
     from urllib.parse import urlencode as _urlencode
 
     @app.template_global()

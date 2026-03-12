@@ -18,10 +18,16 @@ _SORT_MAP = {
 
 @bp.route('/')
 def index():
-    page      = request.args.get('page', 1, type=int)
-    sort      = request.args.get('sort', 'total_cost')
-    direction = request.args.get('dir', 'desc')
-    q         = request.args.get('q', '').strip()
+    page       = request.args.get('page', 1, type=int)
+    sort       = request.args.get('sort', 'total_cost')
+    direction  = request.args.get('dir', 'desc')
+    name       = request.args.get('name', '').strip()
+    category   = request.args.get('category', '').strip()
+    region     = request.args.get('region', '').strip()
+    min_usages = request.args.get('min_usages', type=int)
+    max_usages = request.args.get('max_usages', type=int)
+    min_cost   = request.args.get('min_cost', type=float)
+    max_cost   = request.args.get('max_cost', type=float)
 
     query = (
         db.session.query(
@@ -37,20 +43,23 @@ def index():
         .group_by(DimMeter.id)
     )
 
-    if q:
-        like = f'%{q}%'
-        query = query.filter(
-            DimMeter.meter_name.ilike(like) |
-            DimMeter.meter_category.ilike(like) |
-            DimMeter.meter_region.ilike(like)
-        )
+    if name:       query = query.filter(DimMeter.meter_name.ilike(f'%{name}%'))
+    if category:   query = query.filter(DimMeter.meter_category.ilike(f'%{category}%'))
+    if region:     query = query.filter(DimMeter.meter_region.ilike(f'%{region}%'))
+    if min_usages: query = query.having(func.count(FactBillingLine.id) >= min_usages)
+    if max_usages: query = query.having(func.count(FactBillingLine.id) <= max_usages)
+    if min_cost:   query = query.having(func.sum(FactBillingLine.cost_in_billing_currency) >= min_cost)
+    if max_cost:   query = query.having(func.sum(FactBillingLine.cost_in_billing_currency) <= max_cost)
 
     col = _SORT_MAP.get(sort, _SORT_MAP['total_cost'])
     query = query.order_by(col.desc() if direction == 'desc' else col.asc())
 
     pagination = query.paginate(page=page, per_page=20, error_out=False)
+    filters = dict(name=name, category=category, region=region,
+                   min_usages=min_usages, max_usages=max_usages,
+                   min_cost=min_cost, max_cost=max_cost)
     return render_template('meters/index.html',
-                           pagination=pagination, sort=sort, dir=direction, q=q)
+                           pagination=pagination, sort=sort, dir=direction, filters=filters)
 
 
 @bp.route('/<int:pk>')

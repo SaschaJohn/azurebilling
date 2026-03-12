@@ -18,7 +18,7 @@
     <div class="card text-bg-primary">
       <div class="card-body">
         <h6 class="card-title">Total Cost</h6>
-        <p class="card-text fs-5 cost">{{ "%.4f"|format(total_cost|float) }}</p>
+        <p class="card-text fs-5 cost">{{ total_cost|fmt_cost }}</p>
       </div>
     </div>
   </div>

@@ -14,13 +14,20 @@
   </th>
 {% endmacro %}
 
-{% macro filter_form(q, placeholder='Search…') %}
-<form method="get" class="mb-3 d-flex gap-2" style="max-width: 460px;">
-  <input type="hidden" name="sort" value="{{ request.args.get('sort', '') }}">
-  <input type="hidden" name="dir"  value="{{ request.args.get('dir', '') }}">
-  <input type="text" name="q" value="{{ q }}"
+{% macro text_td(name, value, placeholder='') %}
+<td>
+  <input type="text" name="{{ name }}" value="{{ value or '' }}"
          class="form-control form-control-sm" placeholder="{{ placeholder }}">
-  <button type="submit" class="btn btn-sm btn-primary">Filter</button>
-  {% if q %}<a href="{{ url_with_params(q='', page=1) }}" class="btn btn-sm btn-outline-secondary">Clear</a>{% endif %}
-</form>
+</td>
+{% endmacro %}
+
+{% macro range_td(min_name, max_name, min_val, max_val) %}
+<td class="text-end">
+  <div class="d-flex gap-1 justify-content-end">
+    <input type="number" step="any" name="{{ min_name }}" value="{{ min_val or '' }}"
+           class="form-control form-control-sm" placeholder="min" style="width:80px">
+    <input type="number" step="any" name="{{ max_name }}" value="{{ max_val or '' }}"
+           class="form-control form-control-sm" placeholder="max" style="width:80px">
+  </div>
+</td>
 {% endmacro %}

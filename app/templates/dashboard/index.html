@@ -9,7 +9,7 @@
     <div class="card text-bg-primary">
       <div class="card-body">
         <h6 class="card-title">Total Cost (Billing Currency)</h6>
-        <p class="card-text fs-4 cost">{{ "%.2f"|format(total_cost|float) }}</p>
+        <p class="card-text fs-4 cost">{{ total_cost|fmt_cost(2) }}</p>
       </div>
     </div>
   </div>
@@ -37,7 +37,7 @@
             <tr>
               <td>{{ row.service_family or '(none)' }}</td>
               <td class="text-end">{{ row.line_count }}</td>
-              <td class="text-end cost">{{ "%.4f"|format(row.total_cost|float) }}</td>
+              <td class="text-end cost">{{ row.total_cost|fmt_cost }}</td>
             </tr>
             {% else %}
             <tr><td colspan="3" class="text-muted text-center py-3">No data — import a CSV first.</td></tr>
@@ -64,7 +64,7 @@
                   {{ row.subscription_name or row.subscription_id }}
                 </a>
               </td>
-              <td class="text-end cost">{{ "%.4f"|format(row.total_cost|float) }}</td>
+              <td class="text-end cost">{{ row.total_cost|fmt_cost }}</td>
             </tr>
             {% else %}
             <tr><td colspan="2" class="text-muted text-center py-3">No data.</td></tr>
