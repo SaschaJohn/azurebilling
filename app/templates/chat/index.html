@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% block title %}Chat — Azure Billing{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <h4 class="mb-3">Ask about your billing data
+      {% if g.active_month %}
+        <small class="text-muted fs-6">— {{ g.active_month.strftime('%B %Y') }}</small>
+      {% else %}
+        <small class="text-muted fs-6">— All months</small>
+      {% endif %}
+    </h4>
+
+    <!-- Chat history -->
+    <div id="chat-history"
+         style="height: 60vh; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 1rem; background: #f8f9fa; display: flex; flex-direction: column; gap: 0.75rem;">
+      <div class="text-center text-muted small mt-auto">
+        Ask a question below. Example: "What are my top 5 subscriptions by cost?"
+      </div>
+    </div>
+
+    <!-- Input area -->
+    <div class="mt-3">
+      <div class="input-group">
+        <textarea id="question-input" class="form-control" rows="2"
+                  placeholder="Ask a question about your Azure billing data…"
+                  style="resize: none;"></textarea>
+        <button id="ask-btn" class="btn btn-primary px-4" type="button">Ask</button>
+      </div>
+      <div class="form-text">Press Enter to submit, Shift+Enter for a new line.</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .bubble-user {
+    align-self: flex-end;
+    background: #0d6efd;
+    color: #fff;
+    border-radius: 1rem 1rem 0.25rem 1rem;
+    padding: 0.5rem 0.9rem;
+    max-width: 75%;
+    word-wrap: break-word;
+  }
+  .bubble-ai {
+    align-self: flex-start;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 1rem 1rem 1rem 0.25rem;
+    padding: 0.5rem 0.9rem;
+    max-width: 85%;
+    word-wrap: break-word;
+  }
+  .bubble-error {
+    align-self: flex-start;
+    background: #f8d7da;
+    border: 1px solid #f5c2c7;
+    border-radius: 1rem 1rem 1rem 0.25rem;
+    padding: 0.5rem 0.9rem;
+    max-width: 85%;
+    word-wrap: break-word;
+  }
+  .bubble-thinking {
+    align-self: flex-start;
+    background: #e9ecef;
+    border-radius: 1rem 1rem 1rem 0.25rem;
+    padding: 0.5rem 0.9rem;
+    color: #6c757d;
+    font-style: italic;
+  }
+  #chat-history details summary {
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #6c757d;
+    user-select: none;
+  }
+  #chat-history details pre {
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-top: 0.4rem;
+    background: #f1f3f5;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+  }
+</style>
+
+<script>
+  const history = document.getElementById('chat-history');
+  const input   = document.getElementById('question-input');
+  const btn     = document.getElementById('ask-btn');
+  const activeMonth = {{ g.active_month.strftime('%Y-%m') | tojson if g.active_month else 'null' }};
+
+  function scrollBottom() {
+    history.scrollTop = history.scrollHeight;
+  }
+
+  function appendBubble(cls, html) {
+    const div = document.createElement('div');
+    div.className = cls;
+    div.innerHTML = html;
+    history.appendChild(div);
+    scrollBottom();
+    return div;
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function nl2br(str) {
+    return escapeHtml(str).replace(/\n/g, '<br>');
+  }
+
+  async function sendQuestion() {
+    const question = input.value.trim();
+    if (!question) return;
+
+    // Clear placeholder if first real message
+    const placeholder = history.querySelector('.text-center');
+    if (placeholder) placeholder.remove();
+
+    appendBubble('bubble-user', escapeHtml(question));
+    input.value = '';
+    btn.disabled = true;
+
+    const thinking = appendBubble('bubble-thinking', 'Thinking&hellip;');
+
+    let data;
+    try {
+      const resp = await fetch('/chat/ask', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question, active_month: activeMonth}),
+      });
+      data = await resp.json();
+    } catch (err) {
+      thinking.remove();
+      appendBubble('bubble-error', 'Network error: ' + escapeHtml(String(err)));
+      btn.disabled = false;
+      return;
+    }
+
+    thinking.remove();
+
+    if (data.error) {
+      appendBubble('bubble-error', escapeHtml(data.error));
+    } else {
+      let html = nl2br(data.answer || '(no answer)');
+      if (data.sql) {
+        const rowNote = data.row_count !== undefined
+          ? ` &mdash; ${data.row_count} row${data.row_count !== 1 ? 's' : ''}`
+          : '';
+        html += `
+          <details class="mt-2">
+            <summary>SQL query${rowNote}</summary>
+            <pre>${escapeHtml(data.sql)}</pre>
+          </details>`;
+      }
+      appendBubble('bubble-ai', html);
+    }
+
+    btn.disabled = false;
+    input.focus();
+  }
+
+  btn.addEventListener('click', sendQuestion);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendQuestion();
+    }
+  });
+</script>
+{% endblock %}
