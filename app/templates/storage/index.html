@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sort_th, text_td, range_td %}
+{% block title %}Storage Accounts — Azure Billing{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Storage Accounts</h1>
+
+{% if not heatmap_accounts and not pagination.items %}
+<div class="alert alert-info">No storage account data found. Upload a CSV containing Azure Storage billing rows.</div>
+{% else %}
+
+{% if heatmap_accounts %}
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Transaction Volume Heatmap — Top 15 Storage Accounts</h5>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm mb-0" style="font-size:0.8rem">
+        <thead class="table-light">
+          <tr>
+            <th style="min-width:160px">Account</th>
+            {% for col in heatmap_cols %}
+            <th class="text-end" style="min-width:90px; white-space:nowrap">{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for acct in heatmap_accounts %}
+          <tr>
+            <td class="truncate" title="{{ acct }}">{{ acct }}</td>
+            {% for col in heatmap_cols %}
+              {% set val = heatmap_data[acct][col] %}
+              {% if val %}
+                {% set intensity = ((val / heatmap_max) * 200)|int if heatmap_max else 0 %}
+                <td style="background-color: rgb({{ 255 - intensity }}, {{ 255 - intensity }}, 255);
+                           text-align:right; white-space:nowrap; font-size:0.75rem">
+                  {{ '{:,.0f}'.format(val) }}
+                </td>
+              {% else %}
+                <td style="background-color:#f0f0f0; text-align:right; font-size:0.75rem; color:#aaa">—</td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer text-muted small">
+    Color intensity = transaction volume (SUM of quantity billed). Top 15 accounts by cost, top 10 meter sub-categories by volume.
+  </div>
+</div>
+{% endif %}
+
+<form method="get">
+  <input type="hidden" name="sort" value="{{ sort }}">
+  <input type="hidden" name="dir"  value="{{ dir }}">
+
+  <div class="card">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            {{ sort_th('name',         'Account Name',  sort, dir) }}
+            {{ sort_th('rg',           'Resource Group', sort, dir) }}
+            {{ sort_th('transactions', 'Transactions',  sort, dir, 'text-end') }}
+            {{ sort_th('total_cost',   'Total Cost',    sort, dir, 'text-end') }}
+            {{ sort_th('line_count',   'Lines',         sort, dir, 'text-end') }}
+          </tr>
+          <tr class="table-secondary">
+            {{ text_td('name', filters.name, 'account name…') }}
+            {{ text_td('rg',   filters.rg,   'resource group…') }}
+            {{ range_td('min_tx',   'max_tx',   filters.min_tx,   filters.max_tx) }}
+            {{ range_td('min_cost', 'max_cost', filters.min_cost, filters.max_cost) }}
+            <td></td>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in pagination.items %}
+          <tr>
+            <td class="truncate" title="{{ row.resource_id }}">{{ account_name(row.resource_id) }}</td>
+            <td class="text-muted small truncate" title="{{ row.resource_id }}">{{ row.resource_group_name or '(unnamed)' }}</td>
+            <td class="text-end">{{ '{:,.0f}'.format(row.transactions or 0) }}</td>
+            <td class="text-end cost">{{ row.total_cost|fmt_cost }}</td>
+            <td class="text-end">{{ row.line_count }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-muted text-center py-4">No storage accounts found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-2">
+    <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+    <a href="{{ url_with_params(name='', rg='', min_tx='', max_tx='', min_cost='', max_cost='', page=1) }}"
+       class="btn btn-sm btn-outline-secondary">Clear</a>
+  </div>
+</form>
+
+{% include "_pagination.html" %}
+{% endif %}
+{% endblock %}

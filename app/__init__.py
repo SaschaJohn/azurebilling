@@ -19,6 +19,7 @@ def create_app(config_class=Config):
     from .controllers.invoices import bp as invoices_bp
     from .controllers.resources import bp as resources_bp
     from .controllers.meters import bp as meters_bp
+    from .controllers.storage import bp as storage_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(imports_bp)
@@ -26,11 +27,12 @@ def create_app(config_class=Config):
     app.register_blueprint(invoices_bp)
     app.register_blueprint(resources_bp)
     app.register_blueprint(meters_bp)
+    app.register_blueprint(storage_bp)
 
     from .cli import import_file_cmd
     app.cli.add_command(import_file_cmd)
 
-    def _fmt_cost(value, decimals=4):
+    def _fmt_cost(value, decimals=2):
         if value is None:
             return f'kr. 0.{"0" * decimals}'
         return f'kr. {float(value):,.{decimals}f}'
