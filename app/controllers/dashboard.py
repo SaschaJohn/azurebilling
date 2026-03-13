@@ -26,7 +26,7 @@ def _enrich_rows(rows):
             'pct_change': None if cost_a == 0 else float(delta / cost_a * 100),
         }
         if hasattr(r, 'rg_id'):
-            row['rg_id'] = r.rg_id
+            row['is_rg'] = True
         result.append(row)
     max_abs = max((abs(r['delta']) for r in result), default=1) or 1
     for r in result:

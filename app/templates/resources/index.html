@@ -14,14 +14,12 @@
       <table class="table table-hover mb-0">
         <thead class="table-light">
           <tr>
-            {{ sort_th('name',        'Resource Group', sort, dir) }}
-            {{ sort_th('resource_id', 'Resource ID',    sort, dir) }}
-            {{ sort_th('line_count',  'Lines',          sort, dir, 'text-end') }}
-            {{ sort_th('total_cost',  'Total Cost',     sort, dir, 'text-end') }}
+            {{ sort_th('name',       'Resource Group', sort, dir) }}
+            {{ sort_th('line_count', 'Lines',          sort, dir, 'text-end') }}
+            {{ sort_th('total_cost', 'Total Cost',     sort, dir, 'text-end') }}
           </tr>
           <tr class="table-secondary">
-            {{ text_td('name',        filters.name,        'resource group…') }}
-            {{ text_td('resource_id', filters.resource_id, 'resource ID…') }}
+            {{ text_td('name', filters.name, 'resource group…') }}
             {{ range_td('min_lines', 'max_lines', filters.min_lines, filters.max_lines) }}
             {{ range_td('min_cost',  'max_cost',  filters.min_cost,  filters.max_cost) }}
           </tr>
@@ -29,13 +27,18 @@
         <tbody>
           {% for row in pagination.items %}
           <tr>
-            <td><a href="{{ url_for('resources.detail', pk=row.id) }}">{{ row.resource_group_name or '(unnamed)' }}</a></td>
-            <td class="text-muted small truncate" title="{{ row.resource_id }}">{{ row.resource_id }}</td>
+            <td>
+              {% if row.resource_group_name %}
+                <a href="{{ url_for('resources.detail_by_name', name=row.resource_group_name) }}">{{ row.resource_group_name }}</a>
+              {% else %}
+                <span class="text-muted">(unnamed)</span>
+              {% endif %}
+            </td>
             <td class="text-end">{{ row.line_count }}</td>
             <td class="text-end cost">{{ row.total_cost|fmt_cost }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="4" class="text-muted text-center py-4">No resource groups found.</td></tr>
+          <tr><td colspan="3" class="text-muted text-center py-4">No resource groups found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -44,7 +47,7 @@
 
   <div class="d-flex gap-2 mt-2">
     <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-    <a href="{{ url_with_params(name='', resource_id='', min_lines='', max_lines='', min_cost='', max_cost='', page=1) }}"
+    <a href="{{ url_with_params(name='', min_lines='', max_lines='', min_cost='', max_cost='', page=1) }}"
        class="btn btn-sm btn-outline-secondary">Clear</a>
   </div>
 </form>

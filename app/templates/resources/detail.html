@@ -1,16 +1,15 @@
 {% extends "base.html" %}
-{% block title %}{{ rg.resource_group_name or rg.resource_id }} — Resources{% endblock %}
+{% block title %}{{ name }} — Resources{% endblock %}
 
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="{{ url_for('resources.index') }}">Resources</a></li>
-    <li class="breadcrumb-item active">{{ rg.resource_group_name or rg.resource_id }}</li>
+    <li class="breadcrumb-item active">{{ name }}</li>
   </ol>
 </nav>
 
-<h1 class="mb-1">{{ rg.resource_group_name or '(unnamed)' }}</h1>
-<p class="text-muted mb-3 small text-break">{{ rg.resource_id }}</p>
+<h1 class="mb-1">{{ name or '(unnamed)' }}</h1>
 
 <div class="row mb-4">
   <div class="col-md-3">

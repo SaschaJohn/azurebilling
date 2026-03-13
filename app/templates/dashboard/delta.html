@@ -23,11 +23,11 @@
         {% for row in rows %}
         <tr class="{{ row.row_class }}">
           <td class="truncate">
-            {% if row.rg_id is defined %}
-              {% if row.rg_id is not none %}
-                <a href="{{ url_for('resources.detail', pk=row.rg_id) }}">{{ row.label }}</a>
+            {% if row.is_rg is defined %}
+              {% if row.label %}
+                <a href="{{ url_for('resources.detail_by_name', name=row.label) }}">{{ row.label }}</a>
               {% else %}
-                <a href="{{ url_for('resources.no_group') }}">{{ row.label }}</a>
+                <a href="{{ url_for('resources.no_group') }}">(no resource group)</a>
               {% endif %}
             {% else %}
               {{ row.label }}
