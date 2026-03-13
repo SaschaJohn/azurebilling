@@ -22,7 +22,17 @@
       <tbody>
         {% for row in rows %}
         <tr class="{{ row.row_class }}">
-          <td class="truncate">{{ row.label }}</td>
+          <td class="truncate">
+            {% if row.rg_id is defined %}
+              {% if row.rg_id is not none %}
+                <a href="{{ url_for('resources.detail', pk=row.rg_id) }}">{{ row.label }}</a>
+              {% else %}
+                <a href="{{ url_for('resources.no_group') }}">{{ row.label }}</a>
+              {% endif %}
+            {% else %}
+              {{ row.label }}
+            {% endif %}
+          </td>
           <td class="text-end cost">{{ row.cost_a | fmt_cost }}</td>
           <td class="text-end cost">{{ row.cost_b | fmt_cost }}</td>
           <td class="text-end cost">{{ row.sign }}{{ row.delta | fmt_cost }}</td>
@@ -123,5 +133,5 @@
 
 {{ delta_section('By Service Family', service_rows, month_a, month_b) }}
 {{ delta_section('By Subscription', sub_rows, month_a, month_b) }}
-{{ delta_section('By Resource Group', rg_rows, month_a, month_b) }}
+{{ delta_section('By Resource Group (top 100 by delta)', rg_rows, month_a, month_b) }}
 {% endblock %}

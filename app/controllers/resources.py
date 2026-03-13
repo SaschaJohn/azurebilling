@@ -63,6 +63,36 @@ def index():
                            pagination=pagination, sort=sort, dir=direction, filters=filters)
 
 
+@bp.route('/no-group')
+def no_group():
+    page = request.args.get('page', 1, type=int)
+
+    month_filters = []
+    if g.active_month:
+        month_filters = [
+            FactBillingLine.charge_date >= g.active_month,
+            FactBillingLine.charge_date < g.next_month,
+        ]
+
+    lines_stmt = (
+        select(FactBillingLine)
+        .where(FactBillingLine.resource_group_fk.is_(None), *month_filters)
+        .order_by(FactBillingLine.charge_date.desc())
+    )
+    pagination = db.paginate(lines_stmt, page=page, per_page=50, error_out=False)
+
+    total_cost = db.session.execute(
+        select(func.sum(FactBillingLine.cost_in_billing_currency))
+        .where(FactBillingLine.resource_group_fk.is_(None), *month_filters)
+    ).scalar() or 0
+
+    return render_template(
+        'resources/no_group.html',
+        total_cost=total_cost,
+        pagination=pagination,
+    )
+
+
 @bp.route('/<int:pk>')
 def detail(pk):
     rg = db.get_or_404(DimResourceGroup, pk)
