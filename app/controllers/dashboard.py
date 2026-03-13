@@ -11,7 +11,7 @@ from app.models.import_batch import ImportBatch
 bp = Blueprint('dashboard', __name__)
 
 
-def _enrich_rows(rows):
+def _enrich_rows(rows, is_rg=False):
     result = []
     for r in rows:
         label = r.label
@@ -25,7 +25,7 @@ def _enrich_rows(rows):
             'sign': '+' if delta > 0 else '',
             'pct_change': None if cost_a == 0 else float(delta / cost_a * 100),
         }
-        if hasattr(r, 'rg_id'):
+        if is_rg:
             row['is_rg'] = True
         result.append(row)
     max_abs = max((abs(r['delta']) for r in result), default=1) or 1
@@ -85,27 +85,26 @@ def _delta_by_subscription(month_a, next_a, month_b, next_b):
 def _delta_by_resource_group(month_a, next_a, month_b, next_b):
     rows = db.session.execute(text("""
         WITH a AS (
-            SELECT rg.id AS rg_id, rg.resource_group_name, SUM(f.cost_in_billing_currency) AS cost_a
+            SELECT rg.resource_group_name, SUM(f.cost_in_billing_currency) AS cost_a
             FROM fact_billing_line f JOIN dim_resource_group rg ON rg.id = f.resource_group_fk
             WHERE f.charge_date >= :start_a AND f.charge_date < :end_a
-            GROUP BY rg.id, rg.resource_group_name
+            GROUP BY rg.resource_group_name
         ),
         b AS (
-            SELECT rg.id AS rg_id, rg.resource_group_name, SUM(f.cost_in_billing_currency) AS cost_b
+            SELECT rg.resource_group_name, SUM(f.cost_in_billing_currency) AS cost_b
             FROM fact_billing_line f JOIN dim_resource_group rg ON rg.id = f.resource_group_fk
             WHERE f.charge_date >= :start_b AND f.charge_date < :end_b
-            GROUP BY rg.id, rg.resource_group_name
+            GROUP BY rg.resource_group_name
         )
         SELECT COALESCE(a.resource_group_name, b.resource_group_name) AS label,
-               COALESCE(a.rg_id, b.rg_id) AS rg_id,
                COALESCE(a.cost_a, 0) AS cost_a,
                COALESCE(b.cost_b, 0) AS cost_b,
                COALESCE(b.cost_b, 0) - COALESCE(a.cost_a, 0) AS delta
-        FROM a FULL OUTER JOIN b ON a.rg_id = b.rg_id
+        FROM a FULL OUTER JOIN b ON a.resource_group_name = b.resource_group_name
         ORDER BY ABS(COALESCE(b.cost_b, 0) - COALESCE(a.cost_a, 0)) DESC
         LIMIT 100
     """), {'start_a': month_a, 'end_a': next_a, 'start_b': month_b, 'end_b': next_b}).all()
-    return _enrich_rows(rows)
+    return _enrich_rows(rows, is_rg=True)
 
 
 @bp.route('/')
