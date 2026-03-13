@@ -102,6 +102,11 @@
   // Conversation history sent to the backend for context
   const conversationHistory = [];
 
+  // Input history (arrow-key navigation, like a shell)
+  const inputHistory = [];
+  let historyIdx = -1;   // -1 = not browsing history
+  let savedDraft = '';   // preserves in-progress text when navigating up
+
   function scrollBottom() {
     history.scrollTop = history.scrollHeight;
   }
@@ -138,6 +143,9 @@
     if (placeholder) placeholder.remove();
 
     appendBubble('bubble-user', escapeHtml(question));
+    inputHistory.unshift(question);  // newest first
+    historyIdx = -1;
+    savedDraft = '';
     input.value = '';
     btn.disabled = true;
 
@@ -194,6 +202,29 @@
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendQuestion();
+      return;
+    }
+
+    if (e.key === 'ArrowUp' && inputHistory.length > 0) {
+      // Only navigate up when the cursor is on the first line
+      const beforeCursor = input.value.slice(0, input.selectionStart);
+      if (beforeCursor.includes('\n')) return;
+      e.preventDefault();
+      if (historyIdx === -1) savedDraft = input.value;
+      historyIdx = Math.min(historyIdx + 1, inputHistory.length - 1);
+      input.value = inputHistory[historyIdx];
+      input.setSelectionRange(input.value.length, input.value.length);
+      return;
+    }
+
+    if (e.key === 'ArrowDown' && historyIdx !== -1) {
+      // Only navigate down when the cursor is on the last line
+      const afterCursor = input.value.slice(input.selectionStart);
+      if (afterCursor.includes('\n')) return;
+      e.preventDefault();
+      historyIdx -= 1;
+      input.value = historyIdx === -1 ? savedDraft : inputHistory[historyIdx];
+      input.setSelectionRange(input.value.length, input.value.length);
     }
   });
 </script>
