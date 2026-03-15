@@ -4,7 +4,10 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1>Import Batches</h1>
-  <a href="{{ url_for('imports.upload_form') }}" class="btn btn-success">Upload CSV</a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('imports.azure_list') }}" class="btn btn-outline-primary">Azure Storage</a>
+    <a href="{{ url_for('imports.upload_form') }}" class="btn btn-success">Upload CSV</a>
+  </div>
 </div>
 
 <div class="card">
@@ -19,6 +22,7 @@
           <th>Started</th>
           <th>Finished</th>
           <th>Error</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -35,6 +39,11 @@
           <td>{{ b.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
           <td>{% if b.finished_at %}{{ b.finished_at.strftime('%Y-%m-%d %H:%M:%S') }}{% endif %}</td>
           <td class="text-danger small">{{ b.error_msg or '' }}</td>
+          <td>
+            <form method="post" action="{{ url_for('imports.delete_batch', batch_id=b.id) }}" onsubmit="return confirm('Eintrag löschen? Die importierten Daten bleiben erhalten.')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Löschen</button>
+            </form>
+          </td>
         </tr>
         {% else %}
         <tr><td colspan="7" class="text-muted text-center py-4">No imports yet.</td></tr>

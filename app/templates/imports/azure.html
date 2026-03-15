@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Azure Storage — Azure Billing{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>Azure Storage Blobs</h1>
+  <a href="{{ url_for('imports.index') }}" class="btn btn-secondary">Back to Imports</a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+  <strong>Azure Storage nicht erreichbar:</strong> {{ error }}
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Dateiname</th>
+          <th class="text-end">Größe</th>
+          <th>Zuletzt geändert</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for blob in blobs %}
+        <tr>
+          <td>{{ blob.name }}</td>
+          <td class="text-end text-muted small">{{ (blob.size / 1024 / 1024) | round(2) }} MB</td>
+          <td class="text-muted small">{{ blob.last_modified.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td>
+            {% if blob.imported %}
+            <span class="badge bg-success">Importiert</span>
+            {% else %}
+            <span class="badge bg-secondary">Neu</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <form method="post" class="d-inline import-form">
+              <input type="hidden" name="blob_name" value="{{ blob.name }}">
+              <button type="submit" class="btn btn-sm {% if blob.imported %}btn-outline-secondary{% else %}btn-primary{% endif %} import-btn">Import</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="text-muted text-center py-4">
+            {% if not error %}Keine CSV-Dateien im Container gefunden.{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('.import-form').forEach(function (form) {
+    form.addEventListener('submit', function () {
+      const btn = this.querySelector('.import-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Importing…';
+    });
+  });
+</script>
+{% endblock %}

@@ -15,3 +15,4 @@ class ImportBatch(db.Model):
     skipped_count = db.Column(db.Integer, nullable=False, default=0)
     status = db.Column(db.Text, nullable=False, default='pending')
     error_msg = db.Column(db.Text)
+    deleted_at = db.Column(db.DateTime, nullable=True)
