@@ -124,6 +124,38 @@ def create_app(config_class=Config):
         session['billing_month'] = m
         return redirect(request.args.get('next') or request.referrer or '/')
 
+    # --- Subscription filter ---
+
+    @app.before_request
+    def _set_active_subscriptions():
+        from .models.dimensions import DimSubscription
+
+        sub_rows = (
+            db.session.query(DimSubscription.id, DimSubscription.subscription_name)
+            .order_by(DimSubscription.subscription_name)
+            .all()
+        )
+        g.available_subscriptions = sub_rows  # list of Row(id, subscription_name)
+
+        stored = session.get('active_subscriptions', [])  # list of names
+        if stored:
+            valid_names = {r.subscription_name for r in sub_rows}
+            g.active_subscriptions = [s for s in stored if s in valid_names]
+            active_set = set(g.active_subscriptions)
+            g.active_subscription_ids = [r.id for r in sub_rows if r.subscription_name in active_set]
+        else:
+            g.active_subscriptions = []
+            g.active_subscription_ids = []
+
+    @app.route('/set-subscriptions', methods=['POST'])
+    def set_subscriptions():
+        subs = request.form.getlist('subs')
+        if '__all__' in subs or not subs:
+            session['active_subscriptions'] = []
+        else:
+            session['active_subscriptions'] = subs
+        return redirect(request.form.get('next') or request.referrer or '/')
+
     def _fmt_cost(value, decimals=2):
         currency = getattr(g, 'display_currency', 'DKK')
         rate     = getattr(g, 'display_rate', 1.0)

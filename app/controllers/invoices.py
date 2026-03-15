@@ -44,6 +44,8 @@ def index():
             FactBillingLine.charge_date >= g.active_month,
             FactBillingLine.charge_date < g.next_month,
         )
+    if g.active_subscription_ids:
+        query = query.filter(FactBillingLine.subscription_fk.in_(g.active_subscription_ids))
 
     if invoice_id:      query = query.filter(DimInvoice.invoice_id.ilike(f'%{invoice_id}%'))
     if prev_invoice_id: query = query.filter(DimInvoice.previous_invoice_id.ilike(f'%{prev_invoice_id}%'))
@@ -74,6 +76,8 @@ def detail(pk):
             FactBillingLine.charge_date >= g.active_month,
             FactBillingLine.charge_date < g.next_month,
         ]
+    if g.active_subscription_ids:
+        month_filters.append(FactBillingLine.subscription_fk.in_(g.active_subscription_ids))
 
     lines_stmt = (
         select(FactBillingLine)

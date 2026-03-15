@@ -44,6 +44,8 @@ def index():
             FactBillingLine.charge_date >= g.active_month,
             FactBillingLine.charge_date < g.next_month,
         )
+    if g.active_subscription_ids:
+        query = query.filter(FactBillingLine.subscription_fk.in_(g.active_subscription_ids))
 
     if name:      query = query.filter(DimSubscription.subscription_name.ilike(f'%{name}%'))
     if sub_id:    query = query.filter(DimSubscription.subscription_id.ilike(f'%{sub_id}%'))
@@ -73,6 +75,8 @@ def detail(pk):
             FactBillingLine.charge_date >= g.active_month,
             FactBillingLine.charge_date < g.next_month,
         ]
+    if g.active_subscription_ids:
+        month_filters.append(FactBillingLine.subscription_fk.in_(g.active_subscription_ids))
 
     service_costs = db.session.execute(
         select(

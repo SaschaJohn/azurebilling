@@ -40,6 +40,8 @@ def index():
             FactBillingLine.charge_date >= g.active_month,
             FactBillingLine.charge_date < g.next_month,
         )
+    if g.active_subscription_ids:
+        query = query.filter(FactBillingLine.subscription_fk.in_(g.active_subscription_ids))
 
     if name:      query = query.filter(DimResourceGroup.resource_group_name.ilike(f'%{name}%'))
     if min_lines: query = query.having(func.count(FactBillingLine.id) >= min_lines)
@@ -67,6 +69,8 @@ def no_group():
             FactBillingLine.charge_date >= g.active_month,
             FactBillingLine.charge_date < g.next_month,
         ]
+    if g.active_subscription_ids:
+        month_filters.append(FactBillingLine.subscription_fk.in_(g.active_subscription_ids))
 
     lines_stmt = (
         select(FactBillingLine)
@@ -97,6 +101,8 @@ def detail_by_name(name):
             FactBillingLine.charge_date >= g.active_month,
             FactBillingLine.charge_date < g.next_month,
         ]
+    if g.active_subscription_ids:
+        month_filters.append(FactBillingLine.subscription_fk.in_(g.active_subscription_ids))
 
     rg_ids = select(DimResourceGroup.id).where(DimResourceGroup.resource_group_name == name)
 

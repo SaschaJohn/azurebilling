@@ -1,7 +1,7 @@
 from datetime import date
 
 from flask import Blueprint, g, render_template, request
-from sqlalchemy import func, select, text
+from sqlalchemy import bindparam, func, select, text
 
 from app.extensions import db
 from app.models.dimensions import DimProduct, DimService, DimSubscription
@@ -34,18 +34,19 @@ def _enrich_rows(rows, is_rg=False):
     return result
 
 
-def _delta_by_service(month_a, next_a, month_b, next_b):
-    rows = db.session.execute(text("""
+def _delta_by_service(month_a, next_a, month_b, next_b, sub_ids=None):
+    sub_clause = "AND f.subscription_fk IN :sub_ids" if sub_ids else ""
+    sql = text(f"""
         WITH a AS (
             SELECT s.service_family, SUM(f.cost_in_billing_currency) AS cost_a
             FROM fact_billing_line f JOIN dim_service s ON s.id = f.service_fk
-            WHERE f.charge_date >= :start_a AND f.charge_date < :end_a
+            WHERE f.charge_date >= :start_a AND f.charge_date < :end_a {sub_clause}
             GROUP BY s.service_family
         ),
         b AS (
             SELECT s.service_family, SUM(f.cost_in_billing_currency) AS cost_b
             FROM fact_billing_line f JOIN dim_service s ON s.id = f.service_fk
-            WHERE f.charge_date >= :start_b AND f.charge_date < :end_b
+            WHERE f.charge_date >= :start_b AND f.charge_date < :end_b {sub_clause}
             GROUP BY s.service_family
         )
         SELECT COALESCE(a.service_family, b.service_family) AS label,
@@ -54,22 +55,27 @@ def _delta_by_service(month_a, next_a, month_b, next_b):
                COALESCE(b.cost_b, 0) - COALESCE(a.cost_a, 0) AS delta
         FROM a FULL OUTER JOIN b ON a.service_family = b.service_family
         ORDER BY ABS(COALESCE(b.cost_b, 0) - COALESCE(a.cost_a, 0)) DESC
-    """), {'start_a': month_a, 'end_a': next_a, 'start_b': month_b, 'end_b': next_b}).all()
-    return _enrich_rows(rows)
+    """)
+    params = {'start_a': month_a, 'end_a': next_a, 'start_b': month_b, 'end_b': next_b}
+    if sub_ids:
+        sql = sql.bindparams(bindparam('sub_ids', expanding=True))
+        params['sub_ids'] = sub_ids
+    return _enrich_rows(db.session.execute(sql, params).all())
 
 
-def _delta_by_subscription(month_a, next_a, month_b, next_b):
-    rows = db.session.execute(text("""
+def _delta_by_subscription(month_a, next_a, month_b, next_b, sub_ids=None):
+    sub_clause = "AND f.subscription_fk IN :sub_ids" if sub_ids else ""
+    sql = text(f"""
         WITH a AS (
             SELECT s.subscription_name, SUM(f.cost_in_billing_currency) AS cost_a
             FROM fact_billing_line f JOIN dim_subscription s ON s.id = f.subscription_fk
-            WHERE f.charge_date >= :start_a AND f.charge_date < :end_a
+            WHERE f.charge_date >= :start_a AND f.charge_date < :end_a {sub_clause}
             GROUP BY s.subscription_name
         ),
         b AS (
             SELECT s.subscription_name, SUM(f.cost_in_billing_currency) AS cost_b
             FROM fact_billing_line f JOIN dim_subscription s ON s.id = f.subscription_fk
-            WHERE f.charge_date >= :start_b AND f.charge_date < :end_b
+            WHERE f.charge_date >= :start_b AND f.charge_date < :end_b {sub_clause}
             GROUP BY s.subscription_name
         )
         SELECT COALESCE(a.subscription_name, b.subscription_name) AS label,
@@ -78,22 +84,27 @@ def _delta_by_subscription(month_a, next_a, month_b, next_b):
                COALESCE(b.cost_b, 0) - COALESCE(a.cost_a, 0) AS delta
         FROM a FULL OUTER JOIN b ON a.subscription_name = b.subscription_name
         ORDER BY ABS(COALESCE(b.cost_b, 0) - COALESCE(a.cost_a, 0)) DESC
-    """), {'start_a': month_a, 'end_a': next_a, 'start_b': month_b, 'end_b': next_b}).all()
-    return _enrich_rows(rows)
+    """)
+    params = {'start_a': month_a, 'end_a': next_a, 'start_b': month_b, 'end_b': next_b}
+    if sub_ids:
+        sql = sql.bindparams(bindparam('sub_ids', expanding=True))
+        params['sub_ids'] = sub_ids
+    return _enrich_rows(db.session.execute(sql, params).all())
 
 
-def _delta_by_resource_group(month_a, next_a, month_b, next_b):
-    rows = db.session.execute(text("""
+def _delta_by_resource_group(month_a, next_a, month_b, next_b, sub_ids=None):
+    sub_clause = "AND f.subscription_fk IN :sub_ids" if sub_ids else ""
+    sql = text(f"""
         WITH a AS (
             SELECT rg.resource_group_name, SUM(f.cost_in_billing_currency) AS cost_a
             FROM fact_billing_line f JOIN dim_resource_group rg ON rg.id = f.resource_group_fk
-            WHERE f.charge_date >= :start_a AND f.charge_date < :end_a
+            WHERE f.charge_date >= :start_a AND f.charge_date < :end_a {sub_clause}
             GROUP BY rg.resource_group_name
         ),
         b AS (
             SELECT rg.resource_group_name, SUM(f.cost_in_billing_currency) AS cost_b
             FROM fact_billing_line f JOIN dim_resource_group rg ON rg.id = f.resource_group_fk
-            WHERE f.charge_date >= :start_b AND f.charge_date < :end_b
+            WHERE f.charge_date >= :start_b AND f.charge_date < :end_b {sub_clause}
             GROUP BY rg.resource_group_name
         )
         SELECT COALESCE(a.resource_group_name, b.resource_group_name) AS label,
@@ -103,8 +114,12 @@ def _delta_by_resource_group(month_a, next_a, month_b, next_b):
         FROM a FULL OUTER JOIN b ON a.resource_group_name = b.resource_group_name
         ORDER BY ABS(COALESCE(b.cost_b, 0) - COALESCE(a.cost_a, 0)) DESC
         LIMIT 100
-    """), {'start_a': month_a, 'end_a': next_a, 'start_b': month_b, 'end_b': next_b}).all()
-    return _enrich_rows(rows, is_rg=True)
+    """)
+    params = {'start_a': month_a, 'end_a': next_a, 'start_b': month_b, 'end_b': next_b}
+    if sub_ids:
+        sql = sql.bindparams(bindparam('sub_ids', expanding=True))
+        params['sub_ids'] = sub_ids
+    return _enrich_rows(db.session.execute(sql, params).all(), is_rg=True)
 
 
 @bp.route('/')
@@ -115,6 +130,8 @@ def index():
             FactBillingLine.charge_date >= g.active_month,
             FactBillingLine.charge_date < g.next_month,
         ]
+    if g.active_subscription_ids:
+        month_filters.append(FactBillingLine.subscription_fk.in_(g.active_subscription_ids))
 
     # Cost by service family
     service_costs = db.session.execute(
@@ -175,6 +192,8 @@ def family_detail():
             FactBillingLine.charge_date >= g.active_month,
             FactBillingLine.charge_date < g.next_month,
         ]
+    if g.active_subscription_ids:
+        month_filters.append(FactBillingLine.subscription_fk.in_(g.active_subscription_ids))
 
     product_costs = db.session.query(
         DimProduct.product_name,
@@ -225,9 +244,10 @@ def delta():
 
     next_a, next_b = _next(month_a), _next(month_b)
 
-    service_rows = _delta_by_service(month_a, next_a, month_b, next_b)
-    sub_rows = _delta_by_subscription(month_a, next_a, month_b, next_b)
-    rg_rows = _delta_by_resource_group(month_a, next_a, month_b, next_b)
+    sub_ids = g.active_subscription_ids or None
+    service_rows = _delta_by_service(month_a, next_a, month_b, next_b, sub_ids=sub_ids)
+    sub_rows = _delta_by_subscription(month_a, next_a, month_b, next_b, sub_ids=sub_ids)
+    rg_rows = _delta_by_resource_group(month_a, next_a, month_b, next_b, sub_ids=sub_ids)
 
     return render_template(
         'dashboard/delta.html',
