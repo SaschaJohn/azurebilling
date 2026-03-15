@@ -12,7 +12,6 @@
             <th>Quantity</th>
             <th>Unit</th>
             <th class="text-end">Cost</th>
-            <th>Currency</th>
           </tr>
         </thead>
         <tbody>
@@ -27,10 +26,9 @@
             <td class="cost">{{ line.quantity }}</td>
             <td>{{ line.unit_of_measure or '' }}</td>
             <td class="text-end cost">{{ line.cost_in_billing_currency|fmt_cost }}</td>
-            <td>{{ line.billing_currency or '' }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="8" class="text-muted text-center py-3">No line items.</td></tr>
+          <tr><td colspan="7" class="text-muted text-center py-3">No line items.</td></tr>
           {% endfor %}
         </tbody>
       </table>
